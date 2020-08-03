@@ -11,9 +11,9 @@ import types
 import requests
 import yaml
 from bs4 import BeautifulSoup
-from httprunner import HttpRunner, logger
+from httprunner import logger
+from httprunner.api import HttpRunner
 from requests.cookies import RequestsCookieJar
-
 from fastrunner import models
 from fastrunner.utils.parser import Format
 
@@ -236,18 +236,26 @@ def debug_api(api, project, name=None, config=None, save=True):
 
     testcase_list = [parse_tests(api, load_debugtalk(project), project, name=name, config=config)]
 
+    tests_mapping = {
+        "testcases": testcase_list
+    }
+
     kwargs = {
         "failfast": False
     }
 
     runner = HttpRunner(**kwargs)
-    runner.run(testcase_list)
+    # runner.run(testcase_list)
+    #summary = parse_summary(runner.summary)
+    summary = runner.run(tests_mapping)
+    summary = convertSummaryToLowerVersion(summary)
+    summary = parse_summary(summary)
 
-    summary = parse_summary(runner.summary)
     if save:
         save_summary("", summary, project, type=1)
 
     return summary
+
 
 
 def load_test(test, project=None):
@@ -281,6 +289,24 @@ def load_test(test, project=None):
     return testcase
 
 
+#转换2.0版本报告结果为1.0版本格式
+def convertSummaryToLowerVersion(summary):
+    summary["stat"] = summary["stat"]["teststeps"]
+    summary["stat"]["testsRun"] =  summary["stat"]["total"]
+    for detail in summary["details"]:
+        for record in detail["records"]:
+            meta_datas = record["meta_datas"]
+            meta_data = meta_datas.copy()
+            meta_data.pop("data")
+            meta_data.update(meta_datas["data"][0])
+            meta_data["response"]["content"] = meta_data["response"].get("body")
+            meta_data["response"].update(meta_data["stat"])
+            record["meta_data"] = meta_data
+            record.pop("meta_datas")
+            record.pop("meta_datas_expanded")
+    return summary
+
+
 def parse_summary(summary):
     """序列化summary
     """
@@ -312,7 +338,7 @@ def save_summary(name, summary, project, type=2):
     """
     if "status" in summary.keys():
         return
-    if name is "":
+    if name == "":
         name = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     models.Report.objects.create(**{
