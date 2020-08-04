@@ -238,9 +238,11 @@ def debug_api(api, project, name=None, config=None, save=True):
         """
         api = [api]
 
-    testcase_list = [parse_tests(api, load_debugtalk(project), project, name=name, config=config)]
-
+    debugtalk = load_debugtalk(project)
+    testcase_list = [parse_tests(api, debugtalk, project, name=name, config=config)]
+    project_mapping = testcase_list
     tests_mapping = {
+        "project_mapping": debugtalk,
         "testcases": testcase_list
     }
 
