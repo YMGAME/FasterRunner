@@ -150,6 +150,10 @@ def parse_tests(testcases, debugtalk, project, name=None, config=None):
                         content[key] = eval(value.replace("\n", ""))
                     except:
                         content[key] = value
+
+        if config.get("request"):
+            config["base_url"] = config["request"]["base_url"]
+
         testset["config"] = config
 
     if name:
