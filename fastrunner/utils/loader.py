@@ -214,9 +214,16 @@ def debug_suite(suite, project, obj, config, save=True):
     kwargs = {
         "failfast": False
     }
+    tests_mapping = {
+        "project_mapping": debugtalk,
+        "testcases": test_sets
+    }
     runner = HttpRunner(**kwargs)
-    runner.run(test_sets)
-    summary = parse_summary(runner.summary)
+    #runner.run(test_sets)
+    #summary = parse_summary(runner.summary)
+    summary = runner.run(tests_mapping)
+    summary = convertSummaryToLowerVersion(summary)
+    summary = parse_summary(summary)
     if save:
         save_summary("", summary, project, type=1)
 
