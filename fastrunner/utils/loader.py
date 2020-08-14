@@ -16,6 +16,7 @@ from httprunner.api import HttpRunner
 from requests.cookies import RequestsCookieJar
 from fastrunner import models
 from fastrunner.utils.parser import Format
+from httprunner.parser import LazyString
 
 logger.setup_logger('INFO')
 
@@ -320,6 +321,17 @@ def convertSummaryToLowerVersion(summary):
     return summary
 
 
+#lazyString转为string
+def lazyStringToStr(value):
+    if isinstance(value, LazyString):
+        s = str(value)
+        i = len("LazyString") + 1
+        s = s[i:-1]
+        return s
+    else:
+        return value
+
+
 def parse_summary(summary):
     """序列化summary
     """
@@ -339,6 +351,12 @@ def parse_summary(summary):
                 if isinstance(value, RequestsCookieJar):
                     record["meta_data"]["response"][key] = requests.utils.dict_from_cookiejar(value)
 
+            for key, value in record["meta_data"]["validators"].items():
+                for item in value:
+                    for k, v in item.items():
+                        if isinstance(v, LazyString):
+                            item[k] = lazyStringToStr(v)
+
             if "text/html" in record["meta_data"]["response"]["content_type"]:
                 record["meta_data"]["response"]["content"] = \
                     BeautifulSoup(record["meta_data"]["response"]["content"], features="html.parser").prettify()
@@ -354,9 +372,14 @@ def save_summary(name, summary, project, type=2):
     if name == "":
         name = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+    s = json.dumps(summary, ensure_ascii=False)
+
+
+
+
     models.Report.objects.create(**{
         "project": models.Project.objects.get(id=project),
         "name": name,
         "type": type,
-        "summary": json.dumps(summary, ensure_ascii=False),
+        "summary": s,
     })
